@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1, viewport-fit=cover" />
+<title>Tasks</title>
+<style>
+  :root{
+    --bg:#f5f6f7;
+    --card:#fff;
+    --text:#0b0c0e;
+    --muted:#6a6d75;
+    --divider:#eceef0;
+    --accent:#0a84ff;
+    --shadow: 0 8px 26px rgba(0,0,0,.08), 0 2px 6px rgba(0,0,0,.04);
+    --radius: 18px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0d0f12;
+      --card:#14171b;
+      --text:#f3f4f5;
+      --muted:#9aa0a6;
+      --divider:#22262b;
+      --shadow: 0 12px 28px rgba(0,0,0,.45), 0 2px 6px rgba(0,0,0,.25);
+    }
+  }
+  html,body{height:100%;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Text", Roboto, Segoe UI, system-ui, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    -webkit-font-smoothing:antialiased; line-height:1.35;
+    padding:16px;
+  }
+  .wrap{ max-width:720px; margin:0 auto; }
+  .card{
+    background:var(--card);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:18px 16px 12px;
+    margin-top:10px;
+  }
+  .title{
+    display:flex; align-items:center; gap:10px; font-weight:800; font-size:22px; margin:2px 4px 2px;
+  }
+  .date{ color:var(--muted); font-size:14px; margin:2px 4px 14px; }
+  .list{ list-style:none; padding:0; margin:0; }
+  .item{
+    padding:14px 4px; font-size:17px;
+    border-bottom:1px solid var(--divider);
+  }
+  .item:last-child{ border-bottom:none; }
+  .done{ color:var(--muted); text-decoration: line-through; }
+  /* history toggle */
+  .history-cta{
+    display:flex; align-items:center; gap:8px;
+    color:var(--muted); font-size:14px; padding:12px 4px 6px; cursor:pointer;
+    user-select:none;
+  }
+  .chev{ transition: transform .18s ease; }
+  .history{ display:none; }
+  .history.open{ display:block; }
+  .history .day{ margin:8px 2px 12px; }
+  .history .day-title{ color:var(--muted); font-weight:700; font-size:13px; margin-bottom:6px; }
+  .history .row{ font-size:14px; margin:4px 0 0 10px; color:var(--text); }
+  .history .row.done{ color:var(--muted); text-decoration:line-through; }
+  /* pull handle vibe */
+  .handle{ width:44px;height:4px;border-radius:999px;background:var(--divider); margin:6px auto 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <div class="handle"></div>
+<div class="title" id="headerTitle"></div>
+    <ul id="list" class="list"></ul>
+
+    <div id="histToggle" class="history-cta" aria-expanded="false">
+      <span id="chev" class="chev">▸</span> Last 3 days
+    </div>
+    <div id="history" class="history">
+      <div id="historyContent"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+function showDate() {
+  const now = new Date();
+  const opt = { weekday:"long", month:"short", day:"numeric", year:"numeric" };
+  const dateStr = now.toLocaleDateString(undefined, opt);
+  document.getElementById("headerTitle").innerHTML = `✅ Tasks (${dateStr})`;
+}
+showDate();
+  showDate();
+
+  async function loadToday() {
+    const res = await fetch("/tasks?" + Date.now());
+    const data = await res.json();
+    const ul = document.getElementById("list");
+    ul.innerHTML = "";
+    if (data.length === 0) {
+      const li = document.createElement("li");
+      li.className = "item";
+      li.style.color = "var(--muted)";
+      li.textContent = "No tasks for today — add from editor.";
+      ul.appendChild(li);
+    } else {
+      data.forEach(t => {
+        const li = document.createElement("li");
+        li.className = "item" + (t.done ? " done":"");
+        li.textContent = t.text;
+        ul.appendChild(li);
+      });
+    }
+  }
+  loadToday();
+
+  async function loadHistory() {
+    const res = await fetch("/history?" + Date.now());
+    const days = await res.json();
+    const box = document.getElementById("historyContent");
+    box.innerHTML = "";
+    days.forEach(day => {
+      const d = document.createElement("div");
+      d.className = "day";
+      const h = document.createElement("div");
+      h.className = "day-title";
+      h.textContent = day.date;
+      d.appendChild(h);
+
+      if (!day.tasks || day.tasks.length === 0) {
+        const r = document.createElement("div");
+        r.className = "row";
+        r.style.color = "var(--muted)";
+        r.textContent = "No tasks";
+        d.appendChild(r);
+      } else {
+        day.tasks.forEach(t => {
+          const r = document.createElement("div");
+          r.className = "row" + (t.done ? " done":"");
+          r.textContent = "• " + t.text;
+          d.appendChild(r);
+        });
+      }
+      box.appendChild(d);
+    });
+  }
+
+  // collapsible history
+  const toggle = document.getElementById("histToggle");
+  const history = document.getElementById("history");
+  const chev = document.getElementById("chev");
+  toggle.addEventListener("click", async () => {
+    const open = history.classList.toggle("open");
+    chev.style.transform = open ? "rotate(90deg)" : "rotate(0deg)";
+    toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    if (open && !history.dataset.loaded) {
+      await loadHistory();
+      history.dataset.loaded = "1";
+    }
+  }, {passive:true});
+</script>
+</body>
+</html>

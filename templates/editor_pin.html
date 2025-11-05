@@ -1,0 +1,83 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Unlock</title>
+<style>
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  background: #0d0f12;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin:0;
+}
+.box {
+  background:#14171b;
+  padding:30px;
+  border-radius:20px;
+  text-align:center;
+  width:90%;
+  max-width:300px;
+  box-shadow:0 8px 26px rgba(0,0,0,0.4);
+}
+input {
+  margin-top: 12px;
+  font-size:22px;
+  text-align:center;
+  padding:12px;
+  width:80%;
+  border-radius:10px;
+  border:none;
+  background:#1c1f24;
+  color:white;
+}
+button {
+  margin-top:12px;
+  width:100%;
+  padding:12px;
+  border:none;
+  border-radius:12px;
+  font-size:17px;
+  font-weight:600;
+  background:#0a84ff;
+  color:white;
+}
+.shake { animation: shake .3s; }
+@keyframes shake {
+  0%,100%{transform:translateX(0);}
+  25%{transform:translateX(-8px);}
+  75%{transform:translateX(8px);}
+}
+</style>
+</head>
+<body>
+<div class="box" id="card">
+  <h2>Enter PIN</h2>
+  <input id="pin" type="password" maxlength="12" autofocus />
+  <button onclick="checkPin()">Unlock</button>
+</div>
+<script>
+async function checkPin(){
+  const pin=document.getElementById("pin").value;
+  const card=document.getElementById("card");
+  const res = await fetch("/check_pin",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json"},
+    body:JSON.stringify({pin})
+  });
+
+  if(res.ok){
+    window.location.href="/editor_real";
+  } else {
+    card.classList.add("shake");
+    setTimeout(()=>card.classList.remove("shake"),300);
+    document.getElementById("pin").value="";
+    if(navigator.vibrate)navigator.vibrate(100);
+  }
+}
+</script>
+</body>
+</html>
